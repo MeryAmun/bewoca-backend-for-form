@@ -1,12 +1,119 @@
 const express = require('express');
 const bodyParser =  require('body-parser');
+const cors = require('cors')
+const mysql = require('mysql')
 const nodemailer = require('nodemailer');
+//const connect = require('./app')
 
 
 const app = express()
 
+app.use(cors())
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: false }))
+app.use(function(req, res, next) {
+    console.log('request', req.url, req.body, req.method);
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, x-token");
+    if(req.method === 'OPTIONS') {
+        res.end();
+    }
+    else {
+        next();
+    }
+});
+
+const pool = mysql.createPool({
+    connectionLimit : 30,
+    host: "localhost",
+    user: "chebs",
+    password: "",
+    database: 'bewoca'
+});
+
+
+
+
+//Get comments 
+
+app.get('/api/get', (req, res) =>{
+
+    const sqlSelect = "SELECT * FROM comments";
+
+    pool.getConnection((err) => {
+        if(err){
+            console.log("Erro connecting to Db", err);
+            return;
+        }
+        console.log('Connection established');
+    pool.query(sqlSelect, (err, rows) => {
+        console.log(rows)
+    })
+    });
+
+})
+
+
+
+//post comments
+
+app.post('/api/insert', (req, res) =>{
+    const commentAuthor = req.body.commentAuthor
+    const commentText = req.body.commentText
+
+    const sqlInsert = "INSERT INTO comments (commentAuthor, commentText) VALUES (?,?);";
+
+    pool.getConnection((err) => {
+        if(err){
+            console.log("Erro connecting to Db", err);
+            return;
+        }
+        console.log('Connection established');
+    pool.query(sqlInsert, [commentAuthor, commentText], (err, rows) => {
+        console.log(rows)
+
+        //connection.release()//return the connection to pool
+
+        /////if(!err){
+           /// res.send(rows)
+//}else{
+           // console.log(err)
+       // }
+    })
+    });
+
+})
+
+
+//get a comment by id
+
+app.get('/:id', (req, res) =>{
+
+
+    pool.getConnection((err) => {
+        if(err){
+            console.log("Erro connecting to Db", err);
+            return;
+        }
+        console.log('Connection established');
+    pool.query('SELECT * FROM comments WHERE id = ?', [req.params.id], (err, rows) => {
+
+        //connection.release()//return the connection to pool
+
+        if(!err){
+            res.send(rows)
+        }else{
+            console.log(err)
+        }
+    })
+    });
+
+})
+
+
+
+
+
 
 app.post('/api/form/', (req, res) => {
 
